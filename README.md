@@ -21,6 +21,7 @@ Fill in `.env.local`:
 | --- | --- |
 | `MONGO_URI` | MongoDB connection string. Must be a **replica set** — checkout wraps seat/booking/payment creation in a transaction. |
 | `JWT_SECRET` | Signs both account and guest-chat tokens. |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Credentials for image uploads (chat attachments, payment receipts, profile photos). All three are required or uploads fail. |
 | `EMAIL_USER` / `EMAIL_PASS` | Fallback mailbox for outbound email (the dashboard Settings screen can override it). |
 | `NEXT_PUBLIC_SITE_URL` | Optional. Canonical origin for shareable payment links; derived from the request when unset. |
 
@@ -60,8 +61,13 @@ Anonymous visitors get a **guest** token stored under `chatToken`, never
 customer's email in the widget gives you a support thread of your own and
 nothing else.
 
-Chat attachments are stored in MongoDB and served from `/api/images/:id` rather
-than written to disk, which would not survive a serverless deploy.
+Chat attachments — along with payment receipts and profile photos — are uploaded
+to Cloudinary rather than written to disk, which would not survive a serverless
+deploy. `POST /api/images` takes the multipart file, checks the token, size (5MB)
+and type, hands the bytes to Cloudinary under the `united-fly` folder, and returns
+`{ imageUrl }` with the CDN url that gets persisted on the message or payment.
+Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` in
+`.env.local` or uploads fail.
 
 ## Outbound email
 
@@ -130,7 +136,7 @@ renders without the fare block.
 
 ## Languages
 
-The site ships in English, French and Arabic. The visitor's choice lives in a
+The site ships in English, French, German, Japanese and Arabic. The visitor's choice lives in a
 `LOCALE` cookie — URLs are unchanged — so the server renders the right language
 on the first paint with no flash of English. A first-time visitor is matched
 against `Accept-Language` before falling back to English.
@@ -169,6 +175,14 @@ those imports are written out statically so the bundler can resolve them.
 Right-to-left languages work without per-screen effort: `dir` is set from
 `rtlLocales`, and the customer-facing components use logical Tailwind utilities
 (`ms-`/`me-`, `ps-`/`pe-`, `start-`/`end-`) rather than physical ones.
+
+The design opens most sections with a small mono, uppercase, letter-spaced
+label. All three of those are Latin devices, so locales listed in
+`nonLatinLocales` drop them and get a slightly larger sans label instead —
+letter-spacing breaks Arabic's contextual joining outright, and merely looks
+wrong spread across Japanese glyphs. `useLatinEyebrow()` in
+[`src/lib/eyebrow.ts`](src/lib/eyebrow.ts) is the hook; a new locale written in
+Latin script needs no entry.
 
 Not translated, by design: API error messages, database content (airport and
 city names, the payment details from Settings), the admin dashboard, and prices
