@@ -1,5 +1,5 @@
 # United Fly Airlines
-
+ 
 One Next.js app serving both the customer-facing site and the REST API. It
 replaces the previous split between `united_airlines` (Vite SPA) and
 `flyzone_backend` (Next API), and absorbs the standalone socket.io chat service.
